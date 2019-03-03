@@ -47,9 +47,9 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         n_state = nx  # in Attention: n_state=768 (nx=n_embd)
         # [switch nx => n_state from Block to Attention to keep identical to TF implem]
-        assert n_state % config.n_head == 0
+        assert n_state % config['n_head'] == 0
         self.register_buffer("bias", torch.tril(torch.ones(n_ctx, n_ctx)).view(1, 1, n_ctx, n_ctx))
-        self.n_head = config.n_head
+        self.n_head = config['n_head']
         self.split_size = n_state
         self.scale = scale
         self.c_attn = Conv1D(n_state * 3, nx)
@@ -97,7 +97,7 @@ class Attention(nn.Module):
 class MLP(nn.Module):
     def __init__(self, n_state, config):  # in MLP: n_state=3072 (4 * n_embd)
         super(MLP, self).__init__()
-        nx = config.n_embd
+        nx = config['n_embd']
         self.c_fc = Conv1D(n_state, nx)
         self.c_proj = Conv1D(nx, n_state)
         self.act = gelu
@@ -110,10 +110,10 @@ class MLP(nn.Module):
 class Block(nn.Module):
     def __init__(self, n_ctx, config, scale=False):
         super(Block, self).__init__()
-        nx = config.n_embd
-        self.ln_1 = LayerNorm(nx, eps=config.layer_norm_epsilon)
+        nx = config['n_embd']
+        self.ln_1 = LayerNorm(nx, eps=config['layer_norm_epsilon'])
         self.attn = Attention(nx, n_ctx, config, scale)
-        self.ln_2 = LayerNorm(nx, eps=config.layer_norm_epsilon)
+        self.ln_2 = LayerNorm(nx, eps=config['layer_norm_epsilon'])
         self.mlp = MLP(4 * nx, config)
 
     def forward(self, x, layer_past=None):
@@ -126,15 +126,15 @@ class Block(nn.Module):
 class GPT2Model(nn.Module):
     def __init__(self, config):
         super(GPT2Model, self).__init__()
-        self.n_layer = config.n_layer
-        self.n_embd = config.n_embd
-        self.n_vocab = config.vocab_size
+        self.n_layer = config['n_layer']
+        self.n_embd = config['n_embd']
+        self.n_vocab = config['vocab_size']
 
-        self.wte = nn.Embedding(config.vocab_size, config.n_embd)
-        self.wpe = nn.Embedding(config.n_positions, config.n_embd)
-        block = Block(config.n_ctx, config, scale=True)
-        self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
-        self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        self.wte = nn.Embedding(config['vocab_size'], config['n_embd'])
+        self.wpe = nn.Embedding(config['n_positions'], config['n_embd'])
+        block = Block(config['n_ctx'], config, scale=True)
+        self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config['n_layer'])])
+        self.ln_f = LayerNorm(config['n_embd'], eps=config['layer_norm_epsilon'])
 
     def set_embeddings_weights(self, model_embeddings_weights):
         embed_shape = model_embeddings_weights.shape
@@ -175,7 +175,7 @@ class GPT2Model(nn.Module):
 class GPT2LMHead(nn.Module):
     def __init__(self, model_embeddings_weights, config):
         super(GPT2LMHead, self).__init__()
-        self.n_embd = config.n_embd
+        self.n_embd = config['n_embd']
         self.set_embeddings_weights(model_embeddings_weights)
 
     def set_embeddings_weights(self, model_embeddings_weights):
